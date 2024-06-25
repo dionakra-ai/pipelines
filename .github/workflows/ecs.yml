@@ -26,5 +26,4 @@ jobs:
           GO_TO_DIR: ${{ vars.GO_TO_DIR }}
           POS_PEND: ${{ vars.POS_PEND }}
           ENVIRONMENT: ${{ vars.ENVIRONMENT }}
-          CI_JOB_TOKEN: ${{ secrets.FETCH_TOKEN }}
           ENVIRONMENT_TEST: ${{ vars.ENVIRONMENT_TEST }}

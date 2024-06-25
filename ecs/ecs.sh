@@ -52,7 +52,7 @@ cd ${GO_TO_DIR}
 echo "${ENVIRONMENT}" >> .env.${CI_COMMIT_BRANCH}
 echo "${ENVIRONMENT_TEST}" >> .env.test
 
-docker build -t "${ECR_REGISTRY_ADDRESS}:latest" --build-arg CI_JOB_TOKEN="${CI_JOB_TOKEN}" .
+docker build -t "${ECR_REGISTRY_ADDRESS}:latest"" .
 
 docker image tag "${ECR_REGISTRY_ADDRESS}:latest" "${ECR_REGISTRY_ADDRESS}:${TIMESTAMP}"
 
