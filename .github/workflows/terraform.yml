@@ -1,0 +1,170 @@
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-22.04
+
+    env:
+      ACCOUNT_FAMILY: ${{ vars.ACCOUNT_FAMILY }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          token: ${{ secrets.FETCH_TOKEN }}
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20.4'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 'pypy3.8'
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20.2.0'
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: plan
+
+        run: |
+            export CI_COMMIT_BRANCH=${GITHUB_REF_NAME}
+
+            export CI_PROJECT_NAME=$(echo "${GITHUB_REPOSITORY}" | awk -F / '{print $2}')
+
+            sudo apt-get update && sudo apt-get install -y awscli p7zip build-essential
+
+            mkdir ~/.aws
+            touch ~/.aws/credentials
+
+            aws ssm get-parameters --names "/cicd/${ACCOUNT_FAMILY}/credentials" --with-decryption --query "Parameters[0].Value" --output text > ~/.aws/credentials
+
+            export AWS_PROFILE=${CI_COMMIT_BRANCH}
+
+            unset AWS_ACCESS_KEY_ID
+            unset AWS_SECRET_ACCESS_KEY
+
+            params_candidate=$(aws ssm get-parameters --names "/cicd/account/tfvars" --with-decryption --query "Parameters[0].Value" --output text)
+
+            mkdir -p ./environments
+            touch ./environments/${CI_COMMIT_BRANCH}.tfvars
+
+            if [ "${params_candidate}" != "None" ]; then
+              echo >> ./environments/${CI_COMMIT_BRANCH}.tfvars
+              aws ssm get-parameters --names "/cicd/account/tfvars" --with-decryption --query "Parameters[0].Value" --output text >> ./environments/${CI_COMMIT_BRANCH}.tfvars
+            fi
+
+            export region_candidate=$(aws ssm get-parameters --names "/cicd/account/region" --with-decryption --query "Parameters[0].Value" --output text)
+
+            if [ "${region_candidate}" != "None" ]; then
+              export AWS_DEFAULT_REGION=${region_candidate}
+            fi
+
+            terraform init -force-copy -input=false -backend-config bucket="midnight-${ACCOUNT_FAMILY}-${CI_COMMIT_BRANCH}" -backend-config dynamodb_table="midnight-${ACCOUNT_FAMILY}-${CI_COMMIT_BRANCH}" -backend-config shared_credentials_file=~/.aws/credentials -backend-config profile=${CI_COMMIT_BRANCH} -backend-config region=${AWS_DEFAULT_REGION}
+
+            terraform workspace select ${CI_COMMIT_BRANCH} || terraform workspace new ${CI_COMMIT_BRANCH}
+
+            terraform plan -out=tfplan.json -input=false -var-file ./environments/${CI_COMMIT_BRANCH}.tfvars
+
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: plano
+          path: |
+            ./tfplan.json
+            ./.terraform
+            ./.terraform.lock.hcl
+          overwrite: true
+
+  apply:
+    runs-on: ubuntu-22.04
+
+    needs: plan
+
+    environment:
+      name: ${{ inputs.environment }}
+
+    env:
+      ACCOUNT_FAMILY: ${{ vars.ACCOUNT_FAMILY }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          token: ${{ secrets.FETCH_TOKEN }}
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20.4'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 'pypy3.8'
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20.2.0'
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: plano
+
+      - name: apply
+
+        run: |
+            export CI_COMMIT_BRANCH=${GITHUB_REF_NAME}
+
+            export CI_PROJECT_NAME=$(echo "${GITHUB_REPOSITORY}" | awk -F / '{print $2}')
+
+            sudo apt-get update && sudo apt-get install -y awscli p7zip build-essential
+
+            mkdir ~/.aws
+            touch ~/.aws/credentials
+
+            aws ssm get-parameters --names "/cicd/${ACCOUNT_FAMILY}/credentials" --with-decryption --query "Parameters[0].Value" --output text > ~/.aws/credentials
+
+            export AWS_PROFILE=${CI_COMMIT_BRANCH}
+
+            unset AWS_ACCESS_KEY_ID
+            unset AWS_SECRET_ACCESS_KEY
+
+            params_candidate=$(aws ssm get-parameters --names "/cicd/account/tfvars" --with-decryption --query "Parameters[0].Value" --output text)
+
+            mkdir -p ./environments
+            touch ./environments/${CI_COMMIT_BRANCH}.tfvars
+
+            if [ "${params_candidate}" != "None" ]; then
+              echo >> ./environments/${CI_COMMIT_BRANCH}.tfvars
+              aws ssm get-parameters --names "/cicd/account/tfvars" --with-decryption --query "Parameters[0].Value" --output text >> ./environments/${CI_COMMIT_BRANCH}.tfvars
+            fi
+
+            export region_candidate=$(aws ssm get-parameters --names "/cicd/account/region" --with-decryption --query "Parameters[0].Value" --output text)
+
+            if [ "${region_candidate}" != "None" ]; then
+              export AWS_DEFAULT_REGION=${region_candidate}
+            fi
+
+            sudo chown -R $(whoami):$(whoami) ./tfplan.json ./.terraform ./.terraform.lock.hcl
+
+            sudo chmod -R 777 ./tfplan.json ./.terraform ./.terraform.lock.hcl
+
+            terraform apply -auto-approve -input=false tfplan.json
