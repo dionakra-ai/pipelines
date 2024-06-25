@@ -73,4 +73,7 @@ else
     export SERVICE_NAME=${SERVICE_NAME}${POS_PEND}
 fi
 
+echo SERVICE_NAME=${SERVICE_NAME}
+echo CLUSTER_NAME=${CLUSTER_NAME}
+
 aws ecs update-service --cluster ${CLUSTER_NAME} --service ${SERVICE_NAME} --force-new-deployment
