@@ -39,11 +39,7 @@ jobs:
             mkdir ~/.aws
             touch ~/.aws/credentials
 
-            cat << EOF >> ~/.aws/credentials
-            [development]
-            aws_access_key_id = $AWS_ACCESS_KEY_ID
-            aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
-            EOF
+            aws ssm get-parameters --names "/cicd/credentials" --with-decryption --query "Parameters[0].Value" --output text > ~/.aws/credentials
 
             mkdir -p ./environments
             touch ./environments/${CI_COMMIT_BRANCH}.tfvars
