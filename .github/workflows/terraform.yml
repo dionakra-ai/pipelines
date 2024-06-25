@@ -28,10 +28,11 @@ jobs:
 
             sudo apt-get update && sudo apt-get install -y awscli p7zip build-essential
 
+            mkdir -p ./environments
+            touch ./environments/${CI_COMMIT_BRANCH}.tfvars
+            
             terraform init -force-copy -input=false -backend-config bucket="dionakra-terraform-states" -backend-config dynamodb_table="dionakra-terraform-states" -backend-config profile=${CI_COMMIT_BRANCH} -backend-config region=${AWS_DEFAULT_REGION}
-
             terraform workspace select ${CI_COMMIT_BRANCH} || terraform workspace new ${CI_COMMIT_BRANCH}
-
             terraform plan -out=tfplan.json -input=false
 
 
