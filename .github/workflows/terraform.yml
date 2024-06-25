@@ -36,6 +36,15 @@ jobs:
 
             sudo apt-get update && sudo apt-get install -y awscli p7zip build-essential
 
+            mkdir ~/.aws
+            touch ~/.aws/credentials
+
+            cat << EOF >> ~/.aws/credentials
+            [development]
+            aws_access_key_id = $AWS_ACCESS_KEY_ID
+            aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
+            EOF
+
             mkdir -p ./environments
             touch ./environments/${CI_COMMIT_BRANCH}.tfvars
             
