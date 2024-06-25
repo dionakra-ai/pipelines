@@ -39,16 +39,10 @@ jobs:
             mkdir ~/.aws
             touch ~/.aws/credentials
 
-            cat << EOF >> ~/.aws/credentials
-            [development]
-            aws_access_key_id = $AWS_ACCESS_KEY_ID
-            aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
-            EOF
-
             mkdir -p ./environments
             touch ./environments/${CI_COMMIT_BRANCH}.tfvars
             
-            terraform init -force-copy -input=false -backend-config bucket="dionakra-terraform-state" -backend-config dynamodb_table="dionakra-terraform-state" -backend-config region=${AWS_DEFAULT_REGION}
+            terraform init -force-copy -input=false -backend-config bucket="dionakra-terraform-state" -backend-config dynamodb_table="dionakra-terraform-state" -backend-config shared_credentials_file=~/.aws/credentials -backend-config profile=${CI_COMMIT_BRANCH} -backend-config region=${AWS_DEFAULT_REGION}
             terraform workspace select ${CI_COMMIT_BRANCH} || terraform workspace new ${CI_COMMIT_BRANCH}
             terraform plan -out=tfplan.json -input=false -var-file ./environments/${CI_COMMIT_BRANCH}.tfvars
 
