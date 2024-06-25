@@ -1,0 +1,28 @@
+name: deploy lambda python
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+
+jobs:
+  deploy:
+    environment:
+      name: ${{ inputs.environment }}
+
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dionakra-ai/pipelines/ecs@main
+        with:
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+          GO_TO_DIR: ${{ vars.GO_TO_DIR }}
+          POS_PEND: ${{ vars.POS_PEND }}
+          ENVIRONMENT: ${{ vars.ENVIRONMENT }}
