@@ -1,0 +1,59 @@
+name: 'ecs'
+
+description: 'pipeline de buildar e atualizar a imagem do ecs. ela NAO cria a infra. use o modulo de terraform para isso.'
+
+inputs:
+  ACCOUNT_FAMILY:
+    description: "para qual conta encaominhar o deploy"
+    required: false
+
+  AWS_DEFAULT_REGION:
+    description: "regiao da aws onde o servico esta hospedado"
+    required: true
+
+  AWS_ACCESS_KEY_ID:
+    description: "o id da chave de api da aws para deploy"
+    required: true
+
+  AWS_SECRET_ACCESS_KEY:
+    description: "a chave de api da aws para deploy"
+    required: true
+
+  SERVICE_NAME:
+    description: "um nome do servico, caso nao queira usar o nome do repositorio como nome do mesmo"
+    required: false
+
+  GO_TO_DIR:
+    description: "para qual path devo navegar antes de comecar o build. padrao eu fico no lugar atual"
+    required: false
+
+  POS_PEND:
+    description: "o sufixo para ser colocado no nome do servico. substitui o nome do ambiente."
+    required: false
+
+  ENVIRONMENT:
+    description: "o conteudo do .env com variaveis de ambiente para o build."
+    required: false
+
+  CI_JOB_TOKEN:
+    description: "o token de deploy do git para clonar dependencias dentro do dockerfile (via pip, npm etc)"
+    required: false
+
+  ENVIRONMENT_TEST:
+    description: "o conteudo do .env.test com variaveis de ambiente para o estagio de testes."
+    required: false
+
+runs:
+  using: "docker"
+  image: 'Dockerfile'
+  entrypoint: /ecs.sh
+  env:
+    AWS_DEFAULT_REGION: ${{ inputs.AWS_DEFAULT_REGION }}
+    AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
+    AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
+    SERVICE_NAME: ${{ inputs.SERVICE_NAME }}
+    GO_TO_DIR: ${{ inputs.GO_TO_DIR }}
+    POS_PEND: ${{ inputs.POS_PEND }}
+    ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
+    CI_JOB_TOKEN: ${{ inputs.CI_JOB_TOKEN }}
+    ENVIRONMENT_TEST: ${{ inputs.ENVIRONMENT_TEST }}
