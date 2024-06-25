@@ -67,12 +67,6 @@ sleep 5
 
 export OLD_SERVICE_NAME=${SERVICE_NAME}
 
-if [ -z "${POS_PEND}" ]; then
-    export SERVICE_NAME=${SERVICE_NAME}-${CI_COMMIT_BRANCH}
-else
-    export SERVICE_NAME=${SERVICE_NAME}${POS_PEND}
-fi
-
 echo SERVICE_NAME=${SERVICE_NAME}
 echo CLUSTER_NAME=${CLUSTER_NAME}
 
