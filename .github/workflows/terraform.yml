@@ -28,25 +28,6 @@ jobs:
 
             sudo apt-get update && sudo apt-get install -y awscli p7zip build-essential
 
-            mkdir ~/.aws
-            touch ~/.aws/credentials
-            
-            cat << EOF >> ~/.aws/credentials
-            [default]
-            aws_access_key_id = $AWS_ACCESS_KEY_ID
-            aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
-            EOF
-            
-            params_candidate=$(aws ssm get-parameters --names "/cicd/account/tfvars" --with-decryption --query "Parameters[0].Value" --output text)
-
-            mkdir -p ./environments
-            touch ./environments/${CI_COMMIT_BRANCH}.tfvars
-
-            if [ "${params_candidate}" != "None" ]; then
-              echo >> ./environments/${CI_COMMIT_BRANCH}.tfvars
-              aws ssm get-parameters --names "/cicd/account/tfvars" --with-decryption --query "Parameters[0].Value" --output text >> ./environments/${CI_COMMIT_BRANCH}.tfvars
-            fi
-
             terraform init -force-copy -input=false -backend-config bucket="midnight-${ACCOUNT_FAMILY}-${CI_COMMIT_BRANCH}" -backend-config dynamodb_table="midnight-${ACCOUNT_FAMILY}-${CI_COMMIT_BRANCH}" -backend-config profile=${CI_COMMIT_BRANCH} -backend-config region=${AWS_DEFAULT_REGION}
 
             terraform workspace select ${CI_COMMIT_BRANCH} || terraform workspace new ${CI_COMMIT_BRANCH}
